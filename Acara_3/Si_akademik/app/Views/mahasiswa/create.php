@@ -94,7 +94,7 @@
   </div>
 
   <div class="card">
-    <!-- action masih kosong. Nanti diarahkan ke Controller untuk simpan ke database. -->
+   
     <form action="#" method="POST">
       <label for="nim">NIM</label>
       <input type="text" id="nim" name="nim" placeholder="Masukkan NIM" required>

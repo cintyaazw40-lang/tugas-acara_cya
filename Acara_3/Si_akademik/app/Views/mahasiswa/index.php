@@ -111,7 +111,7 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Data akan diisi dari Controller pada pertemuan berikutnya -->
+       
         <tr>
           <td colspan="4" class="empty-row">Belum ada data (View statis, belum terhubung Model/Controller)</td>
         </tr>
