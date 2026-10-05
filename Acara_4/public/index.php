@@ -13,5 +13,4 @@ $daftarMahasiswa = [
 // Menentukan file View mana yang akan dijadikan konten
 $content = __DIR__ . '/../app/Views/mahasiswa/index.php';
 
-// Memuat layout utama (header, navbar, konten, footer)
 require __DIR__ . '/../app/Views/layouts/main.php';

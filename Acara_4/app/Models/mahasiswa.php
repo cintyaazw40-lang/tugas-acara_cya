@@ -37,8 +37,7 @@ class Mahasiswa
         $this->nama = $nama;
     }
 
-    // Tugas Mandiri: menentukan angkatan berdasarkan 2 digit awal NIM
-    // Asumsi format NIM: 2 digit pertama = tahun masuk (contoh: "23001" -> angkatan 2023)
+
     public function getAngkatan(): string
     {
         $duaDigitAwal = substr($this->nim, 0, 2);
