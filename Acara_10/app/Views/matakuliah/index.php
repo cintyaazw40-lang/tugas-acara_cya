@@ -57,7 +57,7 @@ $base = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
             </div>
         </div>
 
-        <a class="btn btn-outline-secondary" href="<?= $base ?>/dashboard">Kembali ke Dashboard</a>
+        <a class="btn btn-outline-secondary" href="<?= $base ?>/dashboard">Kembali ke Dashboard awal</a>
     </main>
 </body>
 </html>
