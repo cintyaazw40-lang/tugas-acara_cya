@@ -15,7 +15,7 @@ $base = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
     <main class="container py-5" style="max-width: 420px;">
         <div class="text-center mb-4">
             <img src="<?= $base ?>/assets/logo-polije.png" alt="Logo POLIJE" style="width:64px;height:auto;">
-            <h1 class="h4 text-info-emphasis mt-2 mb-0">Politeknik Negeri Jember</h1>
+        <h1 class="h4 text-info-emphasis mt-2 mb-0">Sistem Informasi Akademik</h1>
             <p class="text-secondary">Sistem Informasi Akademik</p>
         </div>
 
