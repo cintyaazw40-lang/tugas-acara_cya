@@ -44,6 +44,7 @@ $base = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
                                         <button type="submit" class="btn btn-info text-white w-100">Login</button>
                     <div class="text-center mt-3">
                         <a href="#" class="text-decoration-none small">Lupa Password?</a>
+                        <p class="text-center text-muted small mt-3">; 2026 Sistem Informasi Akademik</p>
                     </div>
                 </form>
             </div>
