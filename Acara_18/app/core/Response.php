@@ -1,7 +1,6 @@
 <?php
 class Response {
-    public static function json(int $httpCode, bool $success, string $message,
-                                $data = null, array $errors = []): void {
+    public static function json(int $httpCode, bool $success, string $message, $data = null, array $errors = []): void {
         http_response_code($httpCode);
         header('Content-Type: application/json');
 
