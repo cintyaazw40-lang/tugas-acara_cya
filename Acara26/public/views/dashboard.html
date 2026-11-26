@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 24px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+        th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+        th { background: #eee; }
+        .bar { display: flex; justify-content: space-between; align-items: center; }
+        #form-mhs { display: none; border: 1px solid #999; padding: 12px; margin-top: 12px; max-width: 420px; }
+        #form-mhs label { display: block; margin-top: 8px; }
+        #form-mhs input[type=text] { width: 100%; box-sizing: border-box; padding: 6px; }
+        .foto-kecil { width: 60px; height: 60px; object-fit: cover; }
+    </style>
+</head>
+<body>
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="bar">
+        <h1>Dashboard</h1>
+        <div>
+            <span id="info-role"></span>
+            <button id="btn-logout">Logout</button>
+        </div>
+    </div>
+
+    <p>Total mahasiswa: <strong id="total">...</strong></p>
+
+    <button id="btn-tambah" class="aksi-admin">Tambah</button>
+
+    <!-- BARU Acara 26: form tambah/ubah dengan input file -->
+    <form id="form-mhs" class="aksi-admin">
+        <h3 id="judul-form">Tambah Mahasiswa</h3>
+        <input type="hidden" id="f-id">
+        <label>NIM (9 digit) <input type="text" id="f-nim" maxlength="9"></label>
+        <label>Nama <input type="text" id="f-nama" maxlength="100"></label>
+        <label>Program Studi <input type="text" id="f-prodi" maxlength="50"></label>
+        <label>Foto (JPG/PNG, maks 2MB)
+            <input type="file" id="f-foto" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+        </label>
+        <p id="ket-foto" style="font-size:12px;color:#555;"></p>
+        <button type="submit">Simpan</button>
+        <button type="button" id="btn-batal">Batal</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Foto</th><th>NIM</th><th>Nama</th><th>Program Studi</th>
+                <th class="aksi-admin">Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="isi-tabel"></tbody>
+    </table>
+
+    <script src="config.js"></script>
+    <script>
+        const token   = localStorage.getItem('token');
+        const role    = localStorage.getItem('role');
+        const isAdmin = role === 'admin';
+
+        const form = document.querySelector('#form-mhs');
+
+        document.querySelector('#info-role').textContent = `Login sebagai: ${role}  `;
+
+        if (!isAdmin) {
+            document.querySelectorAll('.aksi-admin').forEach(el => el.style.display = 'none');
+        }
+
+        document.querySelector('#btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = 'login.html';
+        });
+
+        function cekUnauthorized(res) {
+            if (res.status === 401) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Request JSON biasa (GET, DELETE)
+        async function api(path, method = 'GET', body = null) {
+            const res = await fetch(`${BASE_URL}${path}`, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: body ? JSON.stringify(body) : null,
+            });
+            const hasil = await res.json();
+            cekUnauthorized(res);
+            return { status: res.status, ...hasil };
+        }
+
+        // Request multipart (POST/ubah) - TANPA header Content-Type
+        async function apiForm(path, formData) {
+            const res = await fetch(`${BASE_URL}${path}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData,
+            });
+            const hasil = await res.json();
+            cekUnauthorized(res);
+            return { status: res.status, ...hasil };
+        }
+
+        async function muat() {
+            const hasil = await api('/mahasiswa');
+            const tbody = document.querySelector('#isi-tabel');
+            tbody.innerHTML = '';
+            if (!hasil.success) { alert(hasil.message); return; }
+
+            document.querySelector('#total').textContent = hasil.data.length;
+
+            hasil.data.forEach(m => {
+                const tr = document.createElement('tr');
+
+                // Kolom foto
+                const tdFoto = document.createElement('td');
+                if (m.foto) {
+                    const img = document.createElement('img');
+                    img.src = `${BASE_URL}/uploads/${m.foto}`;
+                    img.alt = m.nama;
+                    img.className = 'foto-kecil';
+                    tdFoto.appendChild(img);
+                } else {
+                    tdFoto.textContent = '-';
+                }
+                tr.appendChild(tdFoto);
+
+                [m.nim, m.nama, m.prodi].forEach(teks => {
+                    const td = document.createElement('td');
+                    td.textContent = teks;
+                    tr.appendChild(td);
+                });
+
+                const tdAksi = document.createElement('td');
+                tdAksi.className = 'aksi-admin';
+                if (!isAdmin) tdAksi.style.display = 'none';
+
+                const btnUbah = document.createElement('button');
+                btnUbah.textContent = 'Ubah';
+                btnUbah.onclick = () => bukaForm(m);
+
+                const btnHapus = document.createElement('button');
+                btnHapus.textContent = 'Hapus';
+                btnHapus.onclick = () => hapus(m.id);
+
+                tdAksi.append(btnUbah, btnHapus);
+                tr.appendChild(tdAksi);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function bukaForm(m = null) {
+            form.reset();
+            document.querySelector('#f-id').value = m ? m.id : '';
+            document.querySelector('#f-nim').value = m ? m.nim : '';
+            document.querySelector('#f-nama').value = m ? m.nama : '';
+            document.querySelector('#f-prodi').value = m ? m.prodi : '';
+            document.querySelector('#judul-form').textContent =
+                m ? 'Ubah Mahasiswa' : 'Tambah Mahasiswa';
+            document.querySelector('#ket-foto').textContent =
+                m && m.foto ? 'Kosongkan jika tidak ingin mengganti foto.' : '';
+            form.style.display = 'block';
+        }
+
+        function tutupForm() {
+            form.reset();
+            form.style.display = 'none';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.querySelector('#f-id').value;
+            const fileFoto = document.querySelector('#f-foto').files[0];
+
+            const formData = new FormData();
+            formData.append('nim', document.querySelector('#f-nim').value);
+            formData.append('nama', document.querySelector('#f-nama').value);
+            formData.append('prodi', document.querySelector('#f-prodi').value);
+            if (fileFoto) {
+                formData.append('foto', fileFoto);
+            }
+
+            // Ubah data: POST + _method=PUT (PHP tidak membaca multipart di PUT)
+            const path = id
+                ? `/mahasiswa?id=${id}&_method=PUT`
+                : '/mahasiswa';
+
+            const hasil = await apiForm(path, formData);
+
+            // Tampilkan pesan error per-field jika ada
+            let pesan = hasil.message;
+            if (hasil.errors) {
+                pesan += '\n' + Object.values(hasil.errors).join('\n');
+            }
+            alert(pesan);
+
+            if (hasil.success) {
+                tutupForm();
+                muat();
+            }
+        });
+
+        async function hapus(id) {
+            if (!confirm('Yakin hapus data ini?')) return;
+            const hasil = await api(`/mahasiswa?id=${id}`, 'DELETE');
+            alert(hasil.message);
+            muat();
+        }
+
+        document.querySelector('#btn-tambah').addEventListener('click', () => bukaForm());
+        document.querySelector('#btn-batal').addEventListener('click', tutupForm);
+        muat();
+    </script>
+</body>
+</html>

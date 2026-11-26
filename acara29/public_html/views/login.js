@@ -1,0 +1,28 @@
+// BASE_URL, fetchWithRetry(), dan setBusy() ada di config.js
+const username = document.querySelector('#username');
+const password = document.querySelector('#password');
+const tombolLogin = document.querySelector('#form-login button[type="submit"]');
+
+document.querySelector('#form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setBusy(tombolLogin, true, 'Memproses...');
+    try {
+        const res = await fetchWithRetry(`${BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username.value, password: password.value }),
+        });
+        const hasil = await res.json();
+        if (hasil.success) {
+            localStorage.setItem('token', hasil.data.token);
+            localStorage.setItem('role', hasil.data.role);
+            window.location.href = 'dashboard.html';
+        } else {
+            alert(hasil.message);
+        }
+    } catch (err) {
+        alert('Tidak dapat terhubung ke server');
+    } finally {
+        setBusy(tombolLogin, false);
+    }
+});

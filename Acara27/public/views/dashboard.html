@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 24px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+        th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+        th { background: #eee; }
+        .bar { display: flex; justify-content: space-between; align-items: center; }
+        .foto-kecil { width: 60px; height: 60px; object-fit: cover; }
+        #notif { display: none; padding: 10px 14px; margin: 12px 0; border-radius: 4px; }
+        #notif.ok { display: block; background: #e6f4ea; color: #1b5e20; }
+        #notif.gagal { display: block; background: #fdecea; color: #b00020; }
+    </style>
+</head>
+<body>
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="bar">
+        <h1>Dashboard</h1>
+        <div>
+            <span id="info-role"></span>
+            <button id="btn-logout">Logout</button>
+        </div>
+    </div>
+
+    <div id="notif"></div>
+
+    <p>Total mahasiswa: <strong id="total">...</strong></p>
+
+    <!-- Acara 27: Tambah dan Ubah dipindah ke halaman sendiri -->
+    <a href="form_tambah.html" class="aksi-admin"><button>Tambah</button></a>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Foto</th><th>NIM</th><th>Nama</th><th>Program Studi</th>
+                <th class="aksi-admin">Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="isi-tabel"></tbody>
+    </table>
+
+    <script src="config.js"></script>
+    <script>
+        const token   = localStorage.getItem('token');
+        const role    = localStorage.getItem('role');
+        const isAdmin = role === 'admin';
+
+        document.querySelector('#info-role').textContent = `Login sebagai: ${role}  `;
+
+        if (!isAdmin) {
+            document.querySelectorAll('.aksi-admin').forEach(el => el.style.display = 'none');
+        }
+
+        document.querySelector('#btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = 'login.html';
+        });
+
+        // Tugas mandiri 1: notifikasi visual
+        function notif(pesan, sukses) {
+            const el = document.querySelector('#notif');
+            el.textContent = pesan;
+            el.className = sukses ? 'ok' : 'gagal';
+            clearTimeout(notif.timer);
+            notif.timer = setTimeout(() => { el.className = ''; }, 4000);
+        }
+
+        function cekUnauthorized(res) {
+            if (res.status === 401) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function muatDataMahasiswa() {
+            try {
+                const res = await fetch(`${BASE_URL}/mahasiswa`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                cekUnauthorized(res);
+                const hasil = await res.json();
+                const tbody = document.querySelector('#isi-tabel');
+                tbody.innerHTML = '';
+
+                if (!hasil.success) { notif(hasil.message, false); return; }
+
+                document.querySelector('#total').textContent = hasil.data.length;
+
+                if (hasil.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">Belum ada data</td></tr>';
+                    return;
+                }
+
+                hasil.data.forEach(m => {
+                    const tr = document.createElement('tr');
+
+                    const tdFoto = document.createElement('td');
+                    if (m.foto) {
+                        const img = document.createElement('img');
+                        img.src = `${BASE_URL}/uploads/${m.foto}`;
+                        img.alt = m.nama;
+                        img.className = 'foto-kecil';
+                        tdFoto.appendChild(img);
+                    } else {
+                        tdFoto.textContent = '-';
+                    }
+                    tr.appendChild(tdFoto);
+
+                    [m.nim, m.nama, m.prodi].forEach(teks => {
+                        const td = document.createElement('td');
+                        td.textContent = teks;
+                        tr.appendChild(td);
+                    });
+
+                    const tdAksi = document.createElement('td');
+                    tdAksi.className = 'aksi-admin';
+                    if (!isAdmin) tdAksi.style.display = 'none';
+
+                    // Acara 27: tombol Ubah membuka form_edit.html
+                    const btnUbah = document.createElement('button');
+                    btnUbah.textContent = 'Ubah';
+                    btnUbah.onclick = () => { window.location.href = `form_edit.html?id=${m.id}`; };
+
+                    // Acara 27: tombol Hapus
+                    const btnHapus = document.createElement('button');
+                    btnHapus.textContent = 'Hapus';
+                    btnHapus.onclick = () => hapusData(m.id);
+
+                    tdAksi.append(btnUbah, btnHapus);
+                    tr.appendChild(tdAksi);
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                notif('Gagal memuat data.', false);
+            }
+        }
+
+        async function hapusData(id) {
+            if (!confirm('Hapus data ini?')) return;
+            try {
+                const res = await fetch(`${BASE_URL}/mahasiswa?id=${id}`, {
+                    method: 'DELETE', // diteruskan Router ke MahasiswaController::destroy($id)
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                cekUnauthorized(res);
+                const hasil = await res.json();
+                notif(hasil.message, hasil.success);
+            } catch (err) {
+                notif('Tidak dapat terhubung ke server.', false);
+            }
+            muatDataMahasiswa();
+        }
+
+        // Tampilkan notifikasi kiriman dari form_tambah / form_edit
+        const flash = sessionStorage.getItem('flash');
+        if (flash) {
+            const f = JSON.parse(flash);
+            notif(f.teks, f.ok);
+            sessionStorage.removeItem('flash');
+        }
+
+        muatDataMahasiswa();
+    </script>
+</body>
+</html>
