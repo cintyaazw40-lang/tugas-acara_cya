@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        // Acara 25 Langkah 4: lindungi halaman, wajib sudah login
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="card topbar">
+        <div>
+            <h1>Dashboard</h1>
+            <span class="info">Login sebagai: <strong id="role-label"></strong></span>
+        </div>
+        <button id="btn-logout" class="secondary">Logout</button>
+    </div>
+
+    <div class="card">
+        <div>Total Mahasiswa</div>
+        <div class="stat" id="total-mahasiswa">...</div>
+    </div>
+
+    <div class="card" id="panel-form">
+        <h2 id="judul-form">Tambah Mahasiswa</h2>
+        <form id="form-mahasiswa">
+            <input id="nim" placeholder="NIM (9 digit)" required>
+            <input id="nama" placeholder="Nama" required>
+            <input id="prodi" placeholder="Program Studi" required>
+            <button type="submit" id="btn-simpan">Tambah</button>
+            <button type="button" id="btn-batal" class="secondary" style="display:none">Batal</button>
+        </form>
+    </div>
+
+    <div id="pesan" class="pesan"></div>
+
+    <div class="card">
+        <table id="tabel-mahasiswa">
+            <thead><tr><th>NIM</th><th>Nama</th><th>Program Studi</th><th class="kolom-aksi">Aksi</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+<script src="config.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

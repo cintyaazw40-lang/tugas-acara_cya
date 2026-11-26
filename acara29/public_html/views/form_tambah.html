@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tambah Mahasiswa</title>
+<style>
+  body { font-family: sans-serif; max-width: 460px; margin: 24px auto; padding: 0 16px; }
+  label { display: block; margin-top: 12px; }
+  input[type=text] { width: 100%; box-sizing: border-box; padding: 6px; margin-top: 4px; }
+  .error { color: #b00020; font-size: 13px; min-height: 16px; }
+  .ket { font-size: 12px; color: #555; }
+  #notif { display: none; padding: 10px 14px; margin: 12px 0; border-radius: 4px; }
+  #notif.ok { display: block; background: #e6f4ea; color: #1b5e20; }
+  #notif.gagal { display: block; background: #fdecea; color: #b00020; }
+  button { margin-top: 16px; padding: 7px 16px; }
+</style>
+</head>
+<body>
+  <h1>Tambah Mahasiswa</h1>
+  <div id="notif"></div>
+
+  <label>NIM (9 digit)
+    <input type="text" id="nim" maxlength="9">
+  </label>
+  <div class="error" id="err-nim"></div>
+
+  <label>Nama
+    <input type="text" id="nama" maxlength="100">
+  </label>
+  <div class="error" id="err-nama"></div>
+
+  <label>Program Studi
+    <input type="text" id="prodi" maxlength="50">
+  </label>
+  <div class="error" id="err-prodi"></div>
+
+  <label>Foto (JPG/PNG, maks 2MB)
+    <input type="file" id="foto" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+  </label>
+  <div class="error" id="err-foto"></div>
+
+  <button id="btn-simpan">Simpan</button>
+  <a href="dashboard.html">Kembali</a>
+
+  <script src="config.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+
+    if (!token) window.location.href = 'login.html';
+    if (localStorage.getItem('role') !== 'admin') window.location.href = 'dashboard.html';
+
+    function notif(pesan, sukses) {
+      const el = document.getElementById('notif');
+      el.textContent = pesan;
+      el.className = sukses ? 'ok' : 'gagal';
+    }
+
+    function bersihkanError() {
+      document.querySelectorAll('.error').forEach(e => e.textContent = '');
+    }
+
+    // Validasi sisi View: lapisan tambahan di luar validasi Model/Controller
+    function validasi() {
+      bersihkanError();
+      let valid = true;
+      const salah = (id, pesan) => { document.getElementById('err-' + id).textContent = pesan; valid = false; };
+
+      if (nim.value.trim() === '') salah('nim', 'NIM wajib diisi.');
+      else if (!/^\d{9}$/.test(nim.value.trim())) salah('nim', 'NIM harus 9 digit angka.');
+      if (nama.value.trim() === '') salah('nama', 'Nama wajib diisi.');
+      if (prodi.value.trim() === '') salah('prodi', 'Program studi wajib diisi.');
+
+      const f = foto.files[0];
+      if (f) {
+        if (!['image/jpeg', 'image/png'].includes(f.type)) salah('foto', 'Foto harus JPG atau PNG.');
+        else if (f.size > 2 * 1024 * 1024) salah('foto', 'Ukuran foto maksimal 2MB.');
+      }
+      return valid;
+    }
+
+    async function simpanData() {
+      if (!validasi()) { notif('Periksa kembali isian form.', false); return; }
+
+      const formData = new FormData();
+      formData.append('nim', nim.value.trim());
+      formData.append('nama', nama.value.trim());
+      formData.append('prodi', prodi.value.trim());
+      if (foto.files[0]) formData.append('foto', foto.files[0]);
+
+      // Acara 29: tombol dinonaktifkan selama pengiriman. POST tambah tidak diulang
+      // otomatis agar tidak menyimpan data ganda bila respons terlambat.
+      const tombol = document.getElementById('btn-simpan');
+      setBusy(tombol, true, 'Menyimpan...');
+      try {
+        const res = await fetch(`${BASE_URL}/mahasiswa`, {
+          method: 'POST',
+          // Jangan set Content-Type manual, browser mengisi boundary multipart
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        if (res.status === 401) { localStorage.clear(); window.location.href = 'login.html'; return; }
+        const hasil = await res.json();
+
+        if (hasil.success) {
+          sessionStorage.setItem('flash', JSON.stringify({ teks: hasil.message, ok: true }));
+          window.location.href = 'dashboard.html';
+        } else {
+          if (hasil.errors) {
+            Object.keys(hasil.errors).forEach(k => {
+              const e = document.getElementById('err-' + k);
+              if (e) e.textContent = hasil.errors[k];
+            });
+          }
+          notif(hasil.message || 'Gagal menambahkan data.', false);
+        }
+      } catch (err) {
+        notif('Tidak dapat terhubung ke server.', false);
+      } finally {
+        setBusy(tombol, false);
+      }
+    }
+
+    document.getElementById('btn-simpan').addEventListener('click', simpanData);
+  </script>
+</body>
+</html>
